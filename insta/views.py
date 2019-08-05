@@ -8,13 +8,18 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from insta.forms import CustomUserCreationForm
 from insta.models import (Comment, InstaPost, InstaUser, Like, Post,
                           UserConnection)
+# Django Rest Framework changes
+from insta.serializers import (InstaPostSerializer, InstaUserSerializer,
+                               MakeInstaPostSerializer, UpdateUserSerializer)
+from rest_framework.generics import (CreateAPIView, ListAPIView,
+                                     RetrieveAPIView,
+                                     RetrieveUpdateDestroyAPIView,
+                                     UpdateAPIView)
 
 # Create your views here.
 
-class IndexView(LoginRequiredMixin, ListView):
-    model = InstaPost
-    template_name = 'index.html'
-    login_url = 'login'
+class IndexView(ListAPIView):
+    serializer_class = InstaPostSerializer
 
     def get_queryset(self):
         current_user = self.request.user
@@ -23,10 +28,8 @@ class IndexView(LoginRequiredMixin, ListView):
             following.add(conn.following)
         return InstaPost.objects.filter(author__in=following)
 
-class ExploreView(LoginRequiredMixin, ListView):
-    model = InstaPost
-    template_name = 'explore.html'
-    login_url = 'login'
+class ExploreView(ListAPIView):
+    serializer_class = InstaPostSerializer
 
     def get_queryset(self):
         return InstaPost.objects.all().order_by('-posted_on')[:20]
@@ -36,52 +39,24 @@ class SignUp(CreateView):
     success_url = reverse_lazy('login')
     template_name = 'signup.html'
 
-class MakeInstaPost(LoginRequiredMixin, CreateView):
-    model = InstaPost
-    success_url = reverse_lazy('index')
-    fields = ['title', 'image',]
-    template_name = 'make_post.html'
-    login_url = 'login'
+class MakeInstaPost(CreateAPIView):
+    queryset = InstaPost.objects.all()
+    serializer_class = MakeInstaPostSerializer
 
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
-class MakePost(LoginRequiredMixin, CreateView):
-    model = Post
-    success_url = reverse_lazy('index')
-    fields = ['title', 'image', ]
-    template_name = 'make_post.html'
-    login_url = 'login'
+class PostDetail(RetrieveAPIView):
+    queryset = InstaPost.objects.all()
+    serializer_class = InstaPostSerializer
 
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
+class UserProfile(RetrieveAPIView):
+    queryset = InstaUser.objects.all()
+    serializer_class = InstaUserSerializer
 
-class PostDetail(LoginRequiredMixin, DetailView):
-    model = InstaPost
-    template_name = 'post_detail.html'
-    login_url = 'login'
-
-    def get_context_data(self, **kwargs):
-        data = super().get_context_data(**kwargs)
-        liked = Like.objects.filter(post=self.kwargs.get('pk'), user=self.request.user).first()
-        if liked:
-            data['liked'] = 1
-        else:
-            data['liked'] = 0
-        return data
-
-class UserProfile(LoginRequiredMixin, DetailView):
-    model = InstaUser
-    template_name = 'user_profile.html'
-    login_url = 'login'
-
-class EditProfile(LoginRequiredMixin, UpdateView):
-    model = InstaUser
-    template_name = 'edit_profile.html'
-    fields = ['profile_pic', 'username']
-    login_url = 'login'
+class EditProfile(UpdateAPIView):
+    queryset = InstaUser.objects.all()
+    serializer_class = UpdateUserSerializer
 
 class FollowerProfile(LoginRequiredMixin, ListView):
     model = InstaUser

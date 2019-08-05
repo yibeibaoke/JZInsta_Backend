@@ -15,6 +15,7 @@ django-annoying = "*"
 boto3 = "*"
 django-storages = "*"
 python-decouple = "*"
+djangorestframework = "*"
 
 [requires]
 python_version = "3.7"
